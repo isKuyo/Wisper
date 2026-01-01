@@ -1,0 +1,17 @@
+{
+  "name": "wisper-hub",
+  "version": "1.0.0",
+  "description": "Roblox Script Hub with key authentication and checkpoints",
+  "private": true,
+  "scripts": {
+    "install:all": "cd api && npm install && cd ../web && npm install",
+    "dev": "concurrently \"npm run dev:api\" \"npm run dev:web\"",
+    "dev:api": "cd api && npm run dev",
+    "dev:web": "cd web && npm run dev",
+    "db:push": "cd api && npx prisma db push",
+    "db:studio": "cd api && npx prisma studio"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
