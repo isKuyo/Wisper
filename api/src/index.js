@@ -152,35 +152,95 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     - Anti-instrumentation
 ]]
 
--- Anti-dump protection layer
-local _,__,___,____=(function()
-    local _e={}
-    -- Disable common dump methods
+-- AGGRESSIVE ANTI-DUMP PROTECTION
+local _PROTECTED=(function()
+    local _crash=function()
+        pcall(function()
+            local Players=game:GetService("Players")
+            if Players.LocalPlayer then
+                Players.LocalPlayer:Kick("\\n\\n\\n[Wisper Hub] Script dumping detected.\\nYour executor has been flagged.\\n\\n\\n")
+            end
+        end)
+        while true do local _={}for i=1,1e7 do _[i]={}end end
+    end
+    
+    -- Detect dumper signatures
+    local _dumperSigns={"scriptdump","dumpscript","scripthook","hookscript","captureloadstring","stealthhook","loadstringspy"}
     pcall(function()
-        local _g=getfenv or function()return _G end
-        local _env=_g(0)or _G
-        -- Clear dangerous functions that could be used for dumping
-        rawset(_env,"decompile",nil)
-        rawset(_env,"disassemble",nil)
-        rawset(_env,"dumpstring",nil)
-        rawset(_env,"getscriptbytecode",nil)
-        rawset(_env,"getscripthash",nil)
-        rawset(_env,"debug_getupvalues",nil)
-    end)
-    -- Detect instrumentation
-    pcall(function()
-        if debug and debug.sethook then
-            debug.sethook(function()end,"",0)
+        for _,sign in pairs(_dumperSigns)do
+            if rawget(_G,sign)or rawget(getfenv(0),sign)then _crash()end
         end
     end)
-    -- Self-reference protection
-    local _s=script
+    
+    -- Hook request functions to detect webhooks
+    local _origRequest=request or syn and syn.request or http_request
+    local _warnWebhook=function(url)
+        pcall(function()
+            local HttpService=game:GetService("HttpService")
+            local Players=game:GetService("Players")
+            local user=Players.LocalPlayer and Players.LocalPlayer.Name or "Unknown"
+            local userId=Players.LocalPlayer and Players.LocalPlayer.UserId or 0
+            local msg={
+                content="**⚠️ ANTI-DUMP WARNING**\\n\\nSomeone tried to dump Wisper Hub scripts!\\n\\n**Dumper:** "..user.." (ID: "..userId..")\\n**Place:** "..game.PlaceId.."\\n\\n*This webhook has been detected and reported.*",
+                username="Wisper Hub Security",
+                avatar_url="https://i.imgur.com/QpPOQVe.png"
+            }
+            if _origRequest then
+                pcall(function()
+                    _origRequest({Url=url,Method="POST",Headers={["Content-Type"]="application/json"},Body=HttpService:JSONEncode(msg)})
+                end)
+            end
+        end)
+    end
+    
+    -- Intercept and detect webhook URLs in requests
     pcall(function()
-        if _s and _s.Source then
-            _s.Source=""
+        local _hook=function(orig)
+            return function(opts)
+                if type(opts)=="table"and opts.Url then
+                    local url=opts.Url:lower()
+                    if url:find("discord")and url:find("webhook")then
+                        _warnWebhook(opts.Url)
+                        _crash()
+                    end
+                    if opts.Body and type(opts.Body)=="string"then
+                        local body=opts.Body:lower()
+                        if body:find("script capturado")or body:find("dump")or body:find("loadstring")then
+                            if url:find("discord")then _warnWebhook(opts.Url)end
+                            _crash()
+                        end
+                    end
+                end
+                return orig(opts)
+            end
         end
+        if request then rawset(_G,"request",_hook(request))end
+        if http_request then rawset(_G,"http_request",_hook(http_request))end
+        if syn and syn.request then syn.request=_hook(syn.request)end
     end)
-    return nil,nil,nil,nil
+    
+    -- Disable dump functions
+    pcall(function()
+        local _env=getfenv(0)or _G
+        local _kill={"decompile","disassemble","dumpstring","getscriptbytecode","getscripthash","debug_getupvalues","getupvalues","getprotos","getconstants","setupvalue","getupvalue"}
+        for _,fn in pairs(_kill)do rawset(_env,fn,nil)rawset(_G,fn,nil)end
+    end)
+    
+    -- Clear debug hooks
+    pcall(function()if debug and debug.sethook then debug.sethook(function()end,"",0)end end)
+    
+    -- Metatable protection - crash on getinfo attempts
+    pcall(function()
+        local _mt={
+            __tostring=function()return""end,
+            __metatable="Protected",
+            __index=function()return nil end,
+            __newindex=function()end
+        }
+        setmetatable(_G,_mt)
+    end)
+    
+    return true
 end)()
 
 local _BUILD_ID = "${buildId}"
