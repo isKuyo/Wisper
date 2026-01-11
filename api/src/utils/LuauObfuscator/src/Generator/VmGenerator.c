@@ -7,6 +7,7 @@
 #include "../../include/JunkInserter.h"
 #include "../../include/AntiDecompiler.h"
 #include "../../include/NestedVM.h"
+#include "../../include/AntiTamper.h"
 
 #define MAX_OPCODES 100
 #define MAX_DUMMY_PATTERNS 12
