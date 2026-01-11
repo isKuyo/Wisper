@@ -111,7 +111,10 @@ const crypto = require('crypto');
 app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
   try {
     // Use the original loader
-    const loaderPath = path.join(__dirname, '../..', 'loader', 'loader.lua');
+    // In Docker: /app/loader/loader.lua, locally: ../../loader/loader.lua
+    const loaderPath = process.env.NODE_ENV === 'production' 
+      ? path.join('/app', 'loader', 'loader.lua')
+      : path.join(__dirname, '../..', 'loader', 'loader.lua');
     
     if (!fs.existsSync(loaderPath)) {
       return res.status(404).send('-- Loader not available');

@@ -11,6 +11,9 @@ RUN npm install
 
 COPY api/ ./
 
+# Copy loader files
+COPY loader/ ./loader/
+
 # Generate Prisma client
 RUN npx prisma generate
 
