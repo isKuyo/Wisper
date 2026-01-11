@@ -229,3 +229,19 @@ model BannedRobloxUser {
 
   @@index([robloxUserId])
 }
+
+// ═══════════════════════════════════════════════════════════════
+// LOADER TOKENS (One-time tokens for secure decryption)
+// ═══════════════════════════════════════════════════════════════
+model LoaderToken {
+  id            String   @id @default(uuid())
+  token         String   @unique
+  serverKey     String   // Part of decryption key stored on server
+  robloxUserId  BigInt?
+  used          Boolean  @default(false)
+  expiresAt     DateTime
+  createdAt     DateTime @default(now())
+
+  @@index([token])
+  @@index([expiresAt])
+}

@@ -12,6 +12,7 @@ const scriptRoutes = require('./routes/scripts');
 const adminRoutes = require('./routes/admin');
 const loaderRoutes = require('./routes/loader');
 const securityRoutes = require('./routes/security');
+const loaderTokenRoutes = require('./routes/loaderToken');
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { rateLimiter } = require('./middleware/rateLimiter');
@@ -96,6 +97,7 @@ app.use('/api/scripts', scriptRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/loader', loaderRoutes);
 app.use('/api/security', securityRoutes);
+app.use('/api/loader-token', loaderTokenRoutes);
 
 // Session management
 const { generateSessionId, createSession } = require('./utils/session');
@@ -311,17 +313,43 @@ end)
 
 if not _SAFE then return end
 
--- DECRYPTION (only if safe)
-local _C={}
+-- TOKEN-BASED DECRYPTION (anti-dump: code useless without valid server key)
+local _TAPI="${apiUrl.replace('/api', '/api/loader-token')}"
+local _SK=nil
+
+pcall(function()
+if not _r then _crash("No HTTP","DUMP_ATTEMPT")return end
+-- Step 1: Get one-time token
+local tokRes=_r({Url=_TAPI.."/token",Method="POST",Headers={["Content-Type"]="application/json"},Body=H:JSONEncode({robloxUserId=P.UserId})})
+if not tokRes or not tokRes.Body then _crash("Token request failed","DUMP_ATTEMPT")return end
+local tokData=H:JSONDecode(tokRes.Body)
+if not tokData or not tokData.token then _crash("No token received","DUMP_ATTEMPT")return end
+-- Step 2: Validate token to get server key
+local valRes=_r({Url=_TAPI.."/validate",Method="POST",Headers={["Content-Type"]="application/json"},Body=H:JSONEncode({token=tokData.token,robloxUserId=P.UserId})})
+if not valRes or not valRes.Body then _crash("Validation failed","DUMP_ATTEMPT")return end
+local valData=H:JSONDecode(valRes.Body)
+if not valData or not valData.valid or not valData.serverKey then _crash("Invalid token","DUMP_ATTEMPT")return end
+-- Parse server key into table
+_SK={}
+for n in valData.serverKey:gmatch("%d+")do table.insert(_SK,tonumber(n))end
+if #_SK<1 then _crash("Bad server key","DUMP_ATTEMPT")return end
+end)
+
+if not _SAFE or not _SK then return end
+
+-- DECRYPTION (token validated - proceed with client key)
 local _X=function(a,b)
 if bit32 then return bit32.bxor(a,b)end
 local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r
 end
-for i=1,#_E do _C[i]=string.char(_X(_E[i],_K[(i-1)%#_K+1]))end
+local _C={}
+for i=1,#_E do
+_C[i]=string.char(_X(_E[i],_K[(i-1)%#_K+1]))
+end
 if not _SAFE then return end
 local _F=table.concat(_C)
 local _R,_Er=(loadstring or load)(_F)
-if _R then _R()elseif _Er then warn("[Wisper] Load error")end`;
+if _R then _R()elseif _Er then warn("[Wisper] Error")end`;
     
     // NOTE: Loader is NOT obfuscated to ensure reliability
     // Game scripts ARE obfuscated via scripts.js route
