@@ -120,7 +120,8 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     let loaderContent = fs.readFileSync(loaderPath, 'utf8');
     
     // Dynamic config injection (NO API SECRET - only public URL)
-    const apiUrl = `${req.protocol}://${req.get('host')}/api`;
+    // Use environment variable or fallback to request host
+    const apiUrl = process.env.PUBLIC_API_URL || `${req.protocol}://${req.get('host')}/api`;
     const buildId = crypto.randomBytes(8).toString('hex');
     const buildTime = Date.now();
     
