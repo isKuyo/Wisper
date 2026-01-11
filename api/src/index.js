@@ -138,48 +138,24 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     // Remove any API_SECRET references if they exist (safety measure)
     loaderContent = loaderContent.replace(/API_SECRET = "[^"]*",?\n?/g, '');
     
-    // Wrap with bootstrap error reporting and anti-dump
-    const bootstrapWrapper = `--[[
-    WISPER HUB ENTERPRISE LOADER
-    Build: ${buildId}
-    Generated: ${new Date(buildTime).toISOString()}
+    // XOR encrypt the loader content
+    const xorKey = [];
+    for (let i = 0; i < 32; i++) {
+      xorKey.push(Math.floor(Math.random() * 256));
+    }
     
-    SECURITY:
-    - No API secrets exposed
-    - Session-based authentication
-    - HWID hardening
-    - Anti-dump protection
-    - Anti-instrumentation
-]]
-
--- ADVANCED ANTI-DUMP: Detect hooks and crash immediately
-local _X=(function()
-    local _c=function()
-        pcall(function()game:GetService("Players").LocalPlayer:Kick("\\n[Wisper] Dumper detected\\n")end)
-        while true do local _={}for i=1,1e8 do _[i]={}end end
-    end
-    -- Detect hookfunction/hookfunc existence = dumper is active
-    if hookfunction or hookfunc or replaceclosure or clonefunction then
-        -- Dumper detected, but don't crash yet - let it capture garbage
-    end
-    -- Check if loadstring was hooked by comparing info
-    pcall(function()
-        local _ls=loadstring
-        if _ls then
-            local info=debug.getinfo and debug.getinfo(_ls)
-            if info and info.what~="C"then _c()end
-        end
-    end)
-    -- Disable dangerous functions
-    pcall(function()
-        local k={"decompile","dumpstring","getscriptbytecode","getupvalues","getprotos","getconstants"}
-        for _,v in pairs(k)do rawset(_G,v,nil)end
-    end)
-    return 1
-end)()
-
-${loaderContent}
-`;
+    const encryptedBytes = [];
+    for (let i = 0; i < loaderContent.length; i++) {
+      const charCode = loaderContent.charCodeAt(i);
+      const keyByte = xorKey[i % xorKey.length];
+      encryptedBytes.push(charCode ^ keyByte);
+    }
+    
+    // Create the encrypted loader with inline decryptor
+    const bootstrapWrapper = `local _K={${xorKey.join(',')}}
+local _E={${encryptedBytes.join(',')}}
+local _D=""for i=1,#_E do _D=_D..string.char(bit32 and bit32.bxor(_E[i],_K[(i-1)%#_K+1])or(function(a,b)local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r end)(_E[i],_K[(i-1)%#_K+1]))end
+(loadstring or load)(_D)()`;
     
     // NOTE: Loader is NOT obfuscated to ensure reliability
     // Game scripts ARE obfuscated via scripts.js route
