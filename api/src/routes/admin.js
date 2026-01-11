@@ -353,6 +353,43 @@ router.post('/users/:id/update-key', async (req, res, next) => {
   }
 });
 
+// DELETE /admin/users/:id/delete-key - Delete user's key entirely
+router.delete('/users/:id/delete-key', async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const key = await req.prisma.key.findUnique({
+      where: { userId: id }
+    });
+
+    if (!key) {
+      throw new AppError('User has no key', 404, 'KEY_NOT_FOUND');
+    }
+
+    // Delete checkpoint progress for this user
+    await req.prisma.checkpointProgress.deleteMany({
+      where: { userId: id }
+    });
+
+    // Delete the key
+    await req.prisma.key.delete({
+      where: { id: key.id }
+    });
+
+    await logWithRequest(req.prisma, req, AuditEvents.ADMIN_KEY_DELETED, {
+      targetUserId: id,
+      keyId: key.id
+    });
+
+    res.json({
+      success: true,
+      message: 'Key deleted successfully. User will need to complete checkpoints and generate a new key.'
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 // POST /admin/users/:id/ban - Ban user
 router.post('/users/:id/ban', async (req, res, next) => {
   try {

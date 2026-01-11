@@ -32,6 +32,7 @@ const AuditEvents = {
   ADMIN_USER_UNBANNED: 'admin_user_unbanned',
   ADMIN_HWID_RESET: 'admin_hwid_reset',
   ADMIN_KEY_UPDATED: 'admin_key_updated',
+  ADMIN_KEY_DELETED: 'admin_key_deleted',
   ADMIN_CHECKPOINT_CREATED: 'admin_checkpoint_created',
   ADMIN_CHECKPOINT_UPDATED: 'admin_checkpoint_updated',
   ADMIN_CHECKPOINT_DELETED: 'admin_checkpoint_deleted',

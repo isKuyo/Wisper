@@ -143,6 +143,12 @@ class ApiService {
     })
   }
 
+  async deleteUserKey(id) {
+    return this.request(`/admin/users/${id}/delete-key`, {
+      method: 'DELETE'
+    })
+  }
+
   // Admin - Scripts
   async getScripts() {
     return this.request('/admin/scripts')

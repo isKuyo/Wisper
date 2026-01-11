@@ -129,12 +129,21 @@ export default function AdminUsers() {
     setError(null)
 
     try {
-      await api.updateUserKey(userDetails.id, {
-        action: keyAction.type,
-        hours: keyAction.hours,
-        days: keyAction.days
-      })
-      setSuccess(`Key updated successfully`)
+      if (keyAction.type === 'delete') {
+        if (!confirm(`Are you sure you want to DELETE ${userDetails.username}'s key? They will need to complete checkpoints again.`)) {
+          setActionLoading(null)
+          return
+        }
+        await api.deleteUserKey(userDetails.id)
+        setSuccess(`Key deleted successfully`)
+      } else {
+        await api.updateUserKey(userDetails.id, {
+          action: keyAction.type,
+          hours: keyAction.hours,
+          days: keyAction.days
+        })
+        setSuccess(`Key updated successfully`)
+      }
       await loadUserDetails(userDetails.id)
       await loadUsers()
       setKeyAction({ type: '', hours: 6, days: 1 })
@@ -554,6 +563,12 @@ export default function AdminUsers() {
                             ) : (
                               <><CheckCircle className="w-4 h-4" /> Activate</>
                             )}
+                          </button>
+                          <button
+                            onClick={() => setKeyAction({ ...keyAction, type: 'delete' })}
+                            className={`btn ${keyAction.type === 'delete' ? 'btn-danger' : 'btn-secondary'} text-sm`}
+                          >
+                            <Trash2 className="w-4 h-4" /> Delete Key
                           </button>
                         </div>
 
