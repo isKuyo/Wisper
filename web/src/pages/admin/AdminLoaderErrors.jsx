@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Trash2, RefreshCw, Terminal, Clock, User, Gamepad2, Cpu, Copy, Check } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://wisper.lol/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://wisper-production-ecd0.up.railway.app/api'
 
 export default function AdminLoaderErrors() {
   const [errors, setErrors] = useState([])

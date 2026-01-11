@@ -1,4 +1,4 @@
-const API_URL = import.meta.env.VITE_API_URL || 'https://wisper.lol/api'
+const API_URL = import.meta.env.VITE_API_URL || 'https://wisper-production-ecd0.up.railway.app/api'
 
 class ApiService {
   constructor() {
