@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "StringEncryptor.h"
-#include "Utils.h"
+#include "../../include/StringEncryptor.h"
+#include "../../include/Utils.h"
 
 // Encrypt all string constants in bytecode using XOR with rolling key
 void EncryptStringConstants(BytecodeChunk* chunk, int encryptionKey) {

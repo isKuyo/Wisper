@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "CodeVirtualizer.h"
-#include "Utils.h"
+#include "../../include/CodeVirtualizer.h"
+#include "../../include/Utils.h"
 
 // Apply deeper virtualization layer
 void ApplyCodeVirtualization(BytecodeChunk* chunk) {

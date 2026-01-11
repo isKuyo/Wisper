@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "NestedVM.h"
-#include "Utils.h"
+#include "../../include/NestedVM.h"
+#include "../../include/Utils.h"
 
 void GenerateNestedVMWrapper(char** script, int* size, int* capacity) {
     char buf[4096];

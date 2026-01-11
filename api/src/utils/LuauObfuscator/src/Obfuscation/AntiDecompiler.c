@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "AntiDecompiler.h"
-#include "Utils.h"
+#include "../../include/AntiDecompiler.h"
+#include "../../include/Utils.h"
 
 // Insert anti-decompiler traps into bytecode
 void InsertAntiDecompilerTraps(BytecodeChunk* chunk) {

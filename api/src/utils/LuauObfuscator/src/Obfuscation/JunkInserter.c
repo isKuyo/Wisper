@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "JunkInserter.h"
-#include "Utils.h"
+#include "../../include/JunkInserter.h"
+#include "../../include/Utils.h"
 
 // Insert junk/dead code into bytecode
 void InsertJunkCode(BytecodeChunk* chunk) {

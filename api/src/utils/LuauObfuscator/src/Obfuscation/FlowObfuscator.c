@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "FlowObfuscator.h"
-#include "Utils.h"
+#include "../../include/FlowObfuscator.h"
+#include "../../include/Utils.h"
 
 // Apply control flow flattening - transform control structures into state machine
 void ApplyControlFlowFlattening(BytecodeChunk* chunk) {

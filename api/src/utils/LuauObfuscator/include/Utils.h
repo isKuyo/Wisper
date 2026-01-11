@@ -18,4 +18,7 @@ void LogError(const char* format, ...);
 char* EncodeBase85Custom(const unsigned char* data, int len);
 char* SerializeBytecode(BytecodeChunk* chunk);
 
+// String buffer helper
+void Append(char** buffer, int* size, int* capacity, const char* str);
+
 #endif
