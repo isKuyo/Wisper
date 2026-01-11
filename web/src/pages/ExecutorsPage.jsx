@@ -98,6 +98,8 @@ function getCompatibilityLabel(percentage) {
   return 'Poor'
 }
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+
 export default function ExecutorsPage() {
   const [executors, setExecutors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -117,7 +119,7 @@ export default function ExecutorsPage() {
     
     try {
       // Use our backend proxy to avoid CORS issues
-      const response = await fetch('http://localhost:3001/api/executors')
+      const response = await fetch(`${API_URL}/executors`)
       
       if (!response.ok) {
         throw new Error('Failed to fetch executors')

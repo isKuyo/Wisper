@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { AlertTriangle, Trash2, RefreshCw, Terminal, Clock, User, Gamepad2, Cpu, Copy, Check } from 'lucide-react'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+
 export default function AdminLoaderErrors() {
   const [errors, setErrors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -17,7 +19,7 @@ export default function AdminLoaderErrors() {
   const fetchErrors = async () => {
     setLoading(true)
     try {
-      const response = await fetch('http://localhost:3001/api/loader/errors?limit=100')
+      const response = await fetch(`${API_URL}/loader/errors?limit=100`)
       const data = await response.json()
       setErrors(data.errors || [])
       setTotal(data.total || 0)
@@ -31,7 +33,7 @@ export default function AdminLoaderErrors() {
   const clearErrors = async () => {
     if (!confirm('Clear all error logs?')) return
     try {
-      await fetch('http://localhost:3001/api/loader/errors', { method: 'DELETE' })
+      await fetch(`${API_URL}/loader/errors`, { method: 'DELETE' })
       setErrors([])
       setTotal(0)
     } catch (error) {

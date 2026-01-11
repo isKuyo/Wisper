@@ -15,6 +15,9 @@ import {
   Plus
 } from 'lucide-react'
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+const LOADER_URL = API_URL.replace('/api', '/loader')
+
 export default function DashboardPage() {
   const { user, refreshUser } = useAuth()
   const navigate = useNavigate()
@@ -119,7 +122,7 @@ export default function DashboardPage() {
   const [loaderCopied, setLoaderCopied] = useState(false)
 
   const copyLoader = () => {
-    navigator.clipboard.writeText('loadstring(game:HttpGet("http://localhost:3001/loader"))()')
+    navigator.clipboard.writeText(`loadstring(game:HttpGet("${LOADER_URL}"))()`)
     setLoaderCopied(true)
     setTimeout(() => setLoaderCopied(false), 2000)
   }
@@ -375,7 +378,7 @@ export default function DashboardPage() {
         <div className="panel-body">
           <div className="flex items-center gap-3">
             <div className="flex-1 rounded-lg p-4 font-mono text-xs overflow-x-auto" style={{ background: 'var(--bg-primary)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
-              loadstring(game:HttpGet("<span className="text-accent">http://localhost:3001/loader</span>"))()
+              loadstring(game:HttpGet("<span className="text-accent">{LOADER_URL}</span>"))()
             </div>
             <button
               onClick={copyLoader}
