@@ -57,6 +57,13 @@ static char advance(Lexer* lexer) {
 }
 
 static void skipWhitespace(Lexer* lexer) {
+    // Skip UTF-8 BOM at start of file
+    if (lexer->pos == 0 && lexer->length >= 3) {
+        unsigned char* src = (unsigned char*)lexer->source;
+        if (src[0] == 0xEF && src[1] == 0xBB && src[2] == 0xBF) {
+            lexer->pos = 3;
+        }
+    }
     while (1) {
         char c = peek(lexer);
         if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\f' || c == '\v') {

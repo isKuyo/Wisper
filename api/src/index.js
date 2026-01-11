@@ -140,6 +140,18 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     // Remove any API_SECRET references if they exist (safety measure)
     loaderContent = loaderContent.replace(/API_SECRET = "[^"]*",?\n?/g, '');
     
+    // OBFUSCATE the loader content (makes dumped code unreadable)
+    try {
+      const obfResult = obfuscate(loaderContent, { userId: 'loader', keyId: buildId });
+      if (obfResult.success && obfResult.code) {
+        loaderContent = obfResult.code;
+        console.log('[Loader] Obfuscated:', obfResult.stats.originalSize, '->', obfResult.stats.obfuscatedSize, 'bytes');
+      }
+    } catch (obfError) {
+      console.warn('[Loader] Obfuscation failed, using original:', obfError.message);
+      // Continue with non-obfuscated code if obfuscation fails
+    }
+    
     // XOR encrypt the loader content
     const xorKey = [];
     for (let i = 0; i < 32; i++) {
