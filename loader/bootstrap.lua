@@ -3,7 +3,7 @@
     Execute this script to load the hub with error reporting
 ]]
 
-local API_URL = "http://localhost:3001"
+local API_URL = "https://wisper-production-ecd0.up.railway.app"
 
 -- Get executor info
 local function getExecutorName()

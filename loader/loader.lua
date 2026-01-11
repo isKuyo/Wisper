@@ -5,7 +5,7 @@
 
 -- Configuration
 local CONFIG = {
-    API_URL = "http://localhost:3001/api",
+    API_URL = "https://wisper-production-ecd0.up.railway.app/api",
     VERSION = "1.0.0",
     DEBUG = true
 }
