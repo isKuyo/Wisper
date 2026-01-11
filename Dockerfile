@@ -17,4 +17,4 @@ RUN mkdir -p /data
 EXPOSE 3001
 
 # Start command
-CMD npx prisma db push && node src/index.js
+CMD ["sh", "-c", "npx prisma db push && node src/index.js"]
