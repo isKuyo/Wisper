@@ -1,0 +1,19 @@
+{
+  "name": "wisper-hub-bot",
+  "version": "1.0.0",
+  "description": "Discord bot for Wisper Hub - Key management and script distribution",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "deploy": "node deploy-commands.js"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "discord.js": "^14.16.3",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "prisma": "^5.7.0"
+  }
+}
