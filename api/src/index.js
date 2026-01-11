@@ -138,7 +138,7 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     // Remove any API_SECRET references if they exist (safety measure)
     loaderContent = loaderContent.replace(/API_SECRET = "[^"]*",?\n?/g, '');
     
-    // Wrap with bootstrap error reporting
+    // Wrap with bootstrap error reporting and anti-dump
     const bootstrapWrapper = `--[[
     WISPER HUB ENTERPRISE LOADER
     Build: ${buildId}
@@ -148,12 +148,54 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     - No API secrets exposed
     - Session-based authentication
     - HWID hardening
+    - Anti-dump protection
     - Anti-instrumentation
 ]]
+
+-- Anti-dump protection layer
+local _,__,___,____=(function()
+    local _e={}
+    -- Disable common dump methods
+    pcall(function()
+        local _g=getfenv or function()return _G end
+        local _env=_g(0)or _G
+        -- Clear dangerous functions that could be used for dumping
+        rawset(_env,"decompile",nil)
+        rawset(_env,"disassemble",nil)
+        rawset(_env,"dumpstring",nil)
+        rawset(_env,"getscriptbytecode",nil)
+        rawset(_env,"getscripthash",nil)
+        rawset(_env,"debug_getupvalues",nil)
+    end)
+    -- Detect instrumentation
+    pcall(function()
+        if debug and debug.sethook then
+            debug.sethook(function()end,"",0)
+        end
+    end)
+    -- Self-reference protection
+    local _s=script
+    pcall(function()
+        if _s and _s.Source then
+            _s.Source=""
+        end
+    end)
+    return nil,nil,nil,nil
+end)()
 
 local _BUILD_ID = "${buildId}"
 local _BUILD_TIME = ${buildTime}
 local _API_URL = "${apiUrl}"
+
+-- Integrity check
+local _INTEGRITY = (function()
+    local h = 0
+    local s = _BUILD_ID .. tostring(_BUILD_TIME)
+    for i = 1, #s do
+        h = (h * 31 + string.byte(s, i)) % 2147483647
+    end
+    return h
+end)()
 
 -- Error reporting (no secrets needed)
 local function _reportError(errorMsg, stack, phase)
