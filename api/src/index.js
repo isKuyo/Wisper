@@ -156,6 +156,7 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     const bootstrapWrapper = `local _API="${securityApiUrl}"
 local _K={${xorKey.join(',')}}
 local _E={${encryptedBytes.join(',')}}
+local _SAFE=true
 local function _S()
 local P=game:GetService("Players").LocalPlayer
 local H=game:GetService("HttpService")
@@ -168,9 +169,11 @@ if r then r({Url=_API.."/report",Method="POST",Headers={["Content-Type"]="applic
 end)
 end
 
-local function _kick(msg)
+local function _crash(msg,action)
+_SAFE=false
+_report(action or"HOOK_DETECTED",{reason=msg})
 pcall(function()P:Kick("\\n\\n[Wisper] "..msg.."\\n\\n")end)
-while true do local _={}for i=1,1e7 do _[i]={}end end
+while true do local _={}for i=1,1e8 do _[i]=i end _=nil end
 end
 
 -- Check if banned
@@ -179,47 +182,55 @@ if r then
 local res=r({Url=_API.."/check-ban/"..P.UserId,Method="GET"})
 if res and res.Body then
 local data=H:JSONDecode(res.Body)
-if data.banned then _kick("You are banned.\\nReason: "..(data.reason or"Security violation"))end
+if data.banned then _crash("You are banned: "..(data.reason or"Security violation"),"BAN_CHECK")end
 end
 end
 end)
 
--- Detect dumper signatures
-local _detected=nil
-local signs={"scriptdump","dumpscript","scripthook","stealthhook","loadstringspy","getconstants","getprotos","decompile"}
-for _,s in pairs(signs)do
-if rawget(_G,s)or rawget(getfenv(0)or{},s)then _detected="DUMP_ATTEMPT"break end
-end
-
--- Detect hook functions
-if not _detected then
-if hookfunction or hookfunc or replaceclosure or clonefunction then _detected="HOOK_DETECTED"end
-end
-
--- Detect debug hooks
-if not _detected then
+-- CRITICAL: Check if loadstring/load is hooked using debug.getinfo
+local _ls=loadstring or load
 pcall(function()
 if debug and debug.getinfo then
-local i=debug.getinfo(loadstring or load)
-if i and i.what~="C"then _detected="HOOK_DETECTED"end
+local i=debug.getinfo(_ls)
+if i and i.what~="C"then _crash("Hooked loadstring detected","HOOK_DETECTED")end
+local i2=debug.getinfo(string.char)
+if i2 and i2.what~="C"then _crash("Hooked string.char detected","HOOK_DETECTED")end
+local i3=debug.getinfo(table.concat)
+if i3 and i3.what~="C"then _crash("Hooked table.concat detected","HOOK_DETECTED")end
 end
 end)
-end
 
--- Detect tamper attempts
-if not _detected then
+-- Behavioral check: string.char should return exactly what we expect
 pcall(function()
-if getgenv and getgenv().SCRIPT_DUMP_MODE then _detected="TAMPER_ATTEMPT"end
-if getgenv and getgenv().DUMP_SCRIPTS then _detected="DUMP_ATTEMPT"end
+local test=string.char(87,73,83,80,69,82)
+if test~="WISPER"then _crash("string.char behavior modified","TAMPER_ATTEMPT")end
+end)
+
+-- Check for common dumper globals
+local signs={"scriptdump","dumpscript","scripthook","stealthhook","loadstringspy","DUMPER","captured","sendDump"}
+for _,s in pairs(signs)do
+pcall(function()
+if rawget(_G,s)then _crash("Dumper signature: "..s,"DUMP_ATTEMPT")end
+if getgenv and rawget(getgenv(),s)then _crash("Dumper signature: "..s,"DUMP_ATTEMPT")end
 end)
 end
 
-if _detected then
-_report(_detected,{signatures=signs})
-_kick("Security violation: ".._detected)
+-- Check for hooked HttpGet
+pcall(function()
+if debug and debug.getinfo then
+local i=debug.getinfo(game.HttpGet)
+if i and i.what~="C"then _crash("Hooked HttpGet detected","HOOK_DETECTED")end
 end
+end)
+
+-- Check for WEBHOOK in environment (dumper pattern)
+pcall(function()
+if _G.WEBHOOK or(getgenv and getgenv().WEBHOOK)then _crash("Webhook dumper detected","DUMP_ATTEMPT")end
+end)
+
 end
 _S()
+if not _SAFE then return end
 local _D=""for i=1,#_E do _D=_D..string.char(bit32 and bit32.bxor(_E[i],_K[(i-1)%#_K+1])or(function(a,b)local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r end)(_E[i],_K[(i-1)%#_K+1]))end
 (loadstring or load)(_D)()`;
     
