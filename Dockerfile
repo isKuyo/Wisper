@@ -14,15 +14,30 @@ COPY api/ ./
 # Copy loader files
 COPY loader/ ./loader/
 
-# Compile LuauObfuscator for Linux
+# Compile LuauObfuscator for Linux (all source files)
 WORKDIR /app/src/utils/LuauObfuscator
 RUN mkdir -p bin && \
     gcc -I./include -Wall -std=c99 -o bin/Obfuscator \
-    src/Main.c src/Utils/Utils.c src/Protection/Protection.c \
-    src/Generator/VmGenerator.c src/Compiler/BytecodeBuilder.c \
-    src/Compiler/Compiler.c src/Parser/Lexer.c src/Parser/Parser.c \
-    src/VM/VmOpcodes.c src/Crypto/Encryption.c src/Flow/ControlFlow.c \
-    src/Tamper/AntiTamper.c src/Poly/Polymorphic.c src/Fragment/Fragmenter.c
+    src/Main.c \
+    src/Utils/Utils.c \
+    src/Protection/Protection.c \
+    src/Generator/VmGenerator.c \
+    src/Compiler/BytecodeBuilder.c \
+    src/Compiler/Compiler.c \
+    src/Parser/Lexer.c \
+    src/Parser/Parser.c \
+    src/VM/VmOpcodes.c \
+    src/Crypto/Encryption.c \
+    src/Flow/ControlFlow.c \
+    src/Tamper/AntiTamper.c \
+    src/Poly/Polymorphic.c \
+    src/Fragment/Fragmenter.c \
+    src/Obfuscation/AntiDecompiler.c \
+    src/Obfuscation/CodeVirtualizer.c \
+    src/Obfuscation/FlowObfuscator.c \
+    src/Obfuscation/JunkInserter.c \
+    src/Obfuscation/NestedVM.c \
+    src/Obfuscation/StringEncryptor.c
 
 # Copy obfuscator to accessible location
 RUN mkdir -p /app/obfuscator && cp bin/Obfuscator /app/obfuscator/
