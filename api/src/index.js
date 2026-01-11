@@ -151,9 +151,34 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
       encryptedBytes.push(charCode ^ keyByte);
     }
     
-    // Create the encrypted loader with inline decryptor
-    const bootstrapWrapper = `local _K={${xorKey.join(',')}}
+    // Create the encrypted loader with anti-dump detection
+    const webhookUrl = process.env.DISCORD_WEBHOOK_DUMPS || '';
+    const bootstrapWrapper = `local _W="${webhookUrl}"
+local _K={${xorKey.join(',')}}
 local _E={${encryptedBytes.join(',')}}
+local function _A()
+local P=game:GetService("Players").LocalPlayer
+local H=game:GetService("HttpService")
+local _k=function()pcall(function()P:Kick("\\n\\n[Wisper] Security violation detected\\nDumper/Hook detected\\n\\n")end)while true do local _={}for i=1,1e7 do _[i]={}end end end
+local _d=false
+if hookfunction or hookfunc or replaceclosure then _d=true end
+pcall(function()
+local _l=loadstring
+if _l then
+local i=debug.getinfo and debug.getinfo(_l)
+if i and i.what~="C"then _d=true end
+end
+end)
+if _d and _W~=""then
+pcall(function()
+local b={embeds={{title="🚨 DUMPER DETECTED",color=16711680,fields={{name="Player",value=P.Name.." ("..P.UserId..")",inline=true},{name="Place",value=tostring(game.PlaceId),inline=true},{name="Executor",value=(identifyexecutor and identifyexecutor()or"Unknown"),inline=true}},timestamp=os.date("!%Y-%m-%dT%H:%M:%SZ")}}}
+local r=request or syn and syn.request or http_request
+if r then r({Url=_W,Method="POST",Headers={["Content-Type"]="application/json"},Body=H:JSONEncode(b)})end
+end)
+_k()
+end
+end
+_A()
 local _D=""for i=1,#_E do _D=_D..string.char(bit32 and bit32.bxor(_E[i],_K[(i-1)%#_K+1])or(function(a,b)local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r end)(_E[i],_K[(i-1)%#_K+1]))end
 (loadstring or load)(_D)()`;
     
