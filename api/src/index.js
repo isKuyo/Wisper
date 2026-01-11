@@ -218,19 +218,9 @@ if not ok then
 end
 `;
     
-    // Obfuscate the loader using LuauObfuscator
-    let finalContent;
-    try {
-      const obfuscationResult = obfuscate(bootstrapWrapper, {
-        userId: 'loader',
-        sessionId: buildId
-      });
-      finalContent = obfuscationResult.code;
-      console.log('[Loader] Obfuscated build:', buildId, '| Size:', obfuscationResult.stats?.originalSize, '->', obfuscationResult.stats?.obfuscatedSize);
-    } catch (obfError) {
-      console.error('[Loader] Obfuscation failed:', obfError.message);
-      return res.status(500).send('-- Obfuscation error');
-    }
+    // NOTE: Loader is NOT obfuscated to ensure reliability
+    // Game scripts ARE obfuscated via scripts.js route
+    // The loader code is already minified and has anti-tamper features
     
     // Log loader request
     console.log('[Loader] Served build:', buildId, '| IP:', req.ip?.substring(0, 15) || 'unknown');
@@ -238,7 +228,7 @@ end
     res.setHeader('Content-Type', 'text/plain');
     res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.setHeader('X-Build-ID', buildId);
-    res.send(finalContent);
+    res.send(bootstrapWrapper);
   } catch (error) {
     console.error('[Loader] Error:', error.message);
     res.status(500).send('-- Error loading script');
