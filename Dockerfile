@@ -22,5 +22,5 @@ RUN mkdir -p /data
 
 EXPOSE 3001
 
-# Start command
-CMD ["sh", "-c", "npx prisma db push && node src/index.js"]
+# Start command - use --accept-data-loss=false to prevent data reset
+CMD ["sh", "-c", "npx prisma db push --skip-generate && node src/index.js"]
