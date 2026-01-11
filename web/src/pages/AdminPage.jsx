@@ -12,7 +12,8 @@ import {
   TrendingUp,
   Key,
   Gamepad2,
-  AlertTriangle
+  AlertTriangle,
+  Shield
 } from 'lucide-react'
 
 export default function AdminPage() {
@@ -38,6 +39,7 @@ export default function AdminPage() {
   const adminLinks = [
     { name: 'Users', href: '/admin/users', icon: Users, description: 'Manage users and their keys' },
     { name: 'Scripts', href: '/admin/scripts', icon: Code, description: 'Manage game scripts' },
+    { name: 'Security', href: '/admin/security', icon: Shield, description: 'Dumpers, tampers & bans' },
     { name: 'Checkpoints', href: '/admin/checkpoints', icon: CheckSquare, description: 'Configure checkpoints' },
     { name: 'Loader Errors', href: '/admin/loader-errors', icon: AlertTriangle, description: 'View loader execution errors' },
     { name: 'Settings', href: '/admin/settings', icon: Settings, description: 'System settings' },

@@ -17,6 +17,7 @@ import AdminSettings from './pages/admin/AdminSettings'
 import AdminLogs from './pages/admin/AdminLogs'
 import AdminLoaderErrors from './pages/admin/AdminLoaderErrors'
 import AdminScriptPreview from './pages/admin/AdminScriptPreview'
+import AdminSecurity from './pages/admin/AdminSecurity'
 
 function ProtectedRoute({ children, adminOnly = false }) {
   const { user, loading } = useAuth()
@@ -121,6 +122,12 @@ function App() {
             <Route path="admin/scripts/:id/preview" element={
               <ProtectedRoute adminOnly>
                 <AdminScriptPreview />
+              </ProtectedRoute>
+            } />
+            
+            <Route path="admin/security" element={
+              <ProtectedRoute adminOnly>
+                <AdminSecurity />
               </ProtectedRoute>
             } />
           </Route>

@@ -195,3 +195,37 @@ model SystemSettings {
   maintenanceMessage    String?
   loaderVersion         String  @default("1.0.0")
 }
+
+// ═══════════════════════════════════════════════════════════════
+// SECURITY LOGS (Dumper/Tamper/Debug detection)
+// ═══════════════════════════════════════════════════════════════
+model SecurityLog {
+  id            String   @id @default(uuid())
+  robloxUserId  BigInt
+  robloxName    String
+  placeId       BigInt
+  executor      String?
+  action        String   // DUMP_ATTEMPT, TAMPER_ATTEMPT, DEBUG_ATTEMPT, HOOK_DETECTED
+  details       String?  // JSON with extra info
+  keyUsed       String?  // Key that was used (if any)
+  hwid          String?
+  createdAt     DateTime @default(now())
+
+  @@index([robloxUserId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// BANNED ROBLOX USERS (Can't execute scripts)
+// ═══════════════════════════════════════════════════════════════
+model BannedRobloxUser {
+  id            String   @id @default(uuid())
+  robloxUserId  BigInt   @unique
+  robloxName    String
+  reason        String?
+  bannedBy      String?  // Admin who banned
+  createdAt     DateTime @default(now())
+
+  @@index([robloxUserId])
+}

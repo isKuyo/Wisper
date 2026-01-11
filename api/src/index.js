@@ -11,7 +11,7 @@ const checkpointRoutes = require('./routes/checkpoints');
 const scriptRoutes = require('./routes/scripts');
 const adminRoutes = require('./routes/admin');
 const loaderRoutes = require('./routes/loader');
-// const protectionRoutes = require('./routes/protection'); // Removed - using simplified obfuscator
+const securityRoutes = require('./routes/security');
 
 const { errorHandler } = require('./middleware/errorHandler');
 const { rateLimiter } = require('./middleware/rateLimiter');
@@ -95,7 +95,7 @@ app.use('/api/checkpoints', checkpointRoutes);
 app.use('/api/scripts', scriptRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/loader', loaderRoutes);
-// app.use('/api/protection', protectionRoutes); // Removed
+app.use('/api/security', securityRoutes);
 
 // Session management
 const { generateSessionId, createSession } = require('./utils/session');
@@ -151,34 +151,75 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
       encryptedBytes.push(charCode ^ keyByte);
     }
     
-    // Create the encrypted loader with anti-dump detection
-    const webhookUrl = process.env.DISCORD_WEBHOOK_DUMPS || '';
-    const bootstrapWrapper = `local _W="${webhookUrl}"
+    // Create the encrypted loader with anti-dump detection and API reporting
+    const securityApiUrl = apiUrl.replace('/api', '/api/security');
+    const bootstrapWrapper = `local _API="${securityApiUrl}"
 local _K={${xorKey.join(',')}}
 local _E={${encryptedBytes.join(',')}}
-local function _A()
+local function _S()
 local P=game:GetService("Players").LocalPlayer
 local H=game:GetService("HttpService")
-local _k=function()pcall(function()P:Kick("\\n\\n[Wisper] Security violation detected\\nDumper/Hook detected\\n\\n")end)while true do local _={}for i=1,1e7 do _[i]={}end end end
-local _d=false
-if hookfunction or hookfunc or replaceclosure then _d=true end
+local r=request or syn and syn.request or http_request or http and http.request
+local exec=(identifyexecutor and identifyexecutor()or"Unknown")
+
+local function _report(action,details)
 pcall(function()
-local _l=loadstring
-if _l then
-local i=debug.getinfo and debug.getinfo(_l)
-if i and i.what~="C"then _d=true end
+if r then r({Url=_API.."/report",Method="POST",Headers={["Content-Type"]="application/json"},Body=H:JSONEncode({robloxUserId=P.UserId,robloxName=P.Name,placeId=game.PlaceId,executor=exec,action=action,details=details})})end
+end)
+end
+
+local function _kick(msg)
+pcall(function()P:Kick("\\n\\n[Wisper] "..msg.."\\n\\n")end)
+while true do local _={}for i=1,1e7 do _[i]={}end end
+end
+
+-- Check if banned
+pcall(function()
+if r then
+local res=r({Url=_API.."/check-ban/"..P.UserId,Method="GET"})
+if res and res.Body then
+local data=H:JSONDecode(res.Body)
+if data.banned then _kick("You are banned.\\nReason: "..(data.reason or"Security violation"))end
+end
 end
 end)
-if _d and _W~=""then
+
+-- Detect dumper signatures
+local _detected=nil
+local signs={"scriptdump","dumpscript","scripthook","stealthhook","loadstringspy","getconstants","getprotos","decompile"}
+for _,s in pairs(signs)do
+if rawget(_G,s)or rawget(getfenv(0)or{},s)then _detected="DUMP_ATTEMPT"break end
+end
+
+-- Detect hook functions
+if not _detected then
+if hookfunction or hookfunc or replaceclosure or clonefunction then _detected="HOOK_DETECTED"end
+end
+
+-- Detect debug hooks
+if not _detected then
 pcall(function()
-local b={embeds={{title="🚨 DUMPER DETECTED",color=16711680,fields={{name="Player",value=P.Name.." ("..P.UserId..")",inline=true},{name="Place",value=tostring(game.PlaceId),inline=true},{name="Executor",value=(identifyexecutor and identifyexecutor()or"Unknown"),inline=true}},timestamp=os.date("!%Y-%m-%dT%H:%M:%SZ")}}}
-local r=request or syn and syn.request or http_request
-if r then r({Url=_W,Method="POST",Headers={["Content-Type"]="application/json"},Body=H:JSONEncode(b)})end
+if debug and debug.getinfo then
+local i=debug.getinfo(loadstring or load)
+if i and i.what~="C"then _detected="HOOK_DETECTED"end
+end
 end)
-_k()
+end
+
+-- Detect tamper attempts
+if not _detected then
+pcall(function()
+if getgenv and getgenv().SCRIPT_DUMP_MODE then _detected="TAMPER_ATTEMPT"end
+if getgenv and getgenv().DUMP_SCRIPTS then _detected="DUMP_ATTEMPT"end
+end)
+end
+
+if _detected then
+_report(_detected,{signatures=signs})
+_kick("Security violation: ".._detected)
 end
 end
-_A()
+_S()
 local _D=""for i=1,#_E do _D=_D..string.char(bit32 and bit32.bxor(_E[i],_K[(i-1)%#_K+1])or(function(a,b)local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r end)(_E[i],_K[(i-1)%#_K+1]))end
 (loadstring or load)(_D)()`;
     
