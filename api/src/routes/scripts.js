@@ -17,7 +17,18 @@ const { z } = require('zod');
 const { verifyToken } = require('../utils/jwt');
 const { AuditEvents, logWithRequest } = require('../utils/audit');
 const { AppError } = require('../middleware/errorHandler');
-const { obfuscate } = require('../utils/Obfuscator');
+
+// Simple obfuscation (passthrough for now)
+const obfuscate = (code, options = {}) => {
+  const watermark = `-- Wisper Hub | User: ${options.userId} | Key: ${options.keyId} | Session: ${options.sessionId}\n`;
+  return {
+    code: watermark + code,
+    stats: {
+      originalSize: code.length,
+      obfuscatedSize: (watermark + code).length
+    }
+  };
+};
 
 // ═══════════════════════════════════════════════════════════════
 // GET /scripts/:placeId - Get script for a game (requires script token)
