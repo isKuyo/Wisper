@@ -19,6 +19,7 @@ const OBFUSCATOR_PATH = process.env.NODE_ENV === 'production'
  * @param {string} code - The Lua source code to obfuscate
  * @param {object} options - Options for obfuscation
  * @returns {object} - Result with obfuscated code
+ * @throws {Error} - If obfuscation fails (NO FALLBACK)
  */
 function obfuscate(code, options = {}) {
   const { userId = 'unknown', keyId = 'unknown', sessionId = '' } = options;
@@ -30,7 +31,7 @@ function obfuscate(code, options = {}) {
   const outputFile = path.join(tempDir, `obf_output_${tempId}.lua`);
   
   try {
-    // Add watermark comment to track usage
+    // Add watermark comment to track usage (embedded in obfuscated code)
     const watermark = `-- Wisper Hub | User: ${userId} | Session: ${sessionId.substring(0, 8)}\n`;
     const codeWithWatermark = watermark + code;
     
@@ -39,45 +40,37 @@ function obfuscate(code, options = {}) {
     
     // Check if obfuscator binary exists
     if (!fs.existsSync(OBFUSCATOR_PATH)) {
-      console.warn('[Obfuscator] Binary not found, returning original code with watermark');
-      return {
-        success: true,
-        code: codeWithWatermark,
-        warning: 'Obfuscator binary not available'
-      };
+      throw new Error(`Obfuscator binary not found at: ${OBFUSCATOR_PATH}`);
     }
     
-    // Execute obfuscator
-    try {
-      execSync(`"${OBFUSCATOR_PATH}" "${inputFile}" "${outputFile}"`, {
-        timeout: 30000, // 30 second timeout
-        stdio: 'pipe'
-      });
-    } catch (execError) {
-      console.error('[Obfuscator] Execution failed:', execError.message);
-      // Return original code with watermark if obfuscation fails
-      return {
-        success: true,
-        code: codeWithWatermark,
-        warning: 'Obfuscation failed, returning original code'
-      };
-    }
+    // Execute obfuscator - NO FALLBACK, must succeed
+    execSync(`"${OBFUSCATOR_PATH}" "${inputFile}" "${outputFile}"`, {
+      timeout: 60000, // 60 second timeout
+      stdio: 'pipe'
+    });
     
     // Read output file
-    if (fs.existsSync(outputFile)) {
-      const obfuscatedCode = fs.readFileSync(outputFile, 'utf8');
-      return {
-        success: true,
-        code: obfuscatedCode
-      };
-    } else {
-      // Fallback to original code
-      return {
-        success: true,
-        code: codeWithWatermark,
-        warning: 'Output file not created'
-      };
+    if (!fs.existsSync(outputFile)) {
+      throw new Error('Obfuscator did not produce output file');
     }
+    
+    const obfuscatedCode = fs.readFileSync(outputFile, 'utf8');
+    
+    if (!obfuscatedCode || obfuscatedCode.trim().length === 0) {
+      throw new Error('Obfuscator produced empty output');
+    }
+    
+    return {
+      success: true,
+      code: obfuscatedCode,
+      stats: {
+        originalSize: code.length,
+        obfuscatedSize: obfuscatedCode.length
+      }
+    };
+  } catch (error) {
+    console.error('[Obfuscator] FATAL ERROR:', error.message);
+    throw error; // Re-throw - NO FALLBACK to original code
   } finally {
     // Cleanup temp files
     try {
