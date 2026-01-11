@@ -24,7 +24,10 @@ export function AuthProvider({ children }) {
       setUser(data.user)
     } catch (error) {
       console.error('Auth check failed:', error)
-      api.removeToken()
+      // Only remove token on authentication errors (401/403)
+      if (error.status === 401 || error.status === 403) {
+        api.removeToken()
+      }
     } finally {
       setLoading(false)
     }
