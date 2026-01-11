@@ -4,6 +4,10 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/loader",
+      "destination": "https://wisper-production-ecd0.up.railway.app/loader"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
