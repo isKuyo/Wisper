@@ -151,13 +151,12 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
       encryptedBytes.push(charCode ^ keyByte);
     }
     
-    // Create the encrypted loader with anti-dump detection and API reporting
+    // Create the encrypted loader with advanced anti-dump detection
     const securityApiUrl = apiUrl.replace('/api', '/api/security');
     const bootstrapWrapper = `local _API="${securityApiUrl}"
 local _K={${xorKey.join(',')}}
 local _E={${encryptedBytes.join(',')}}
 local _SAFE=true
-local function _S()
 local P=game:GetService("Players").LocalPlayer
 local H=game:GetService("HttpService")
 local r=request or syn and syn.request or http_request or http and http.request
@@ -181,58 +180,87 @@ pcall(function()
 if r then
 local res=r({Url=_API.."/check-ban/"..P.UserId,Method="GET"})
 if res and res.Body then
-local data=H:JSONDecode(res.Body)
-if data.banned then _crash("You are banned: "..(data.reason or"Security violation"),"BAN_CHECK")end
+local d=H:JSONDecode(res.Body)
+if d.banned then _crash("Banned: "..(d.reason or"Security violation"),"BAN_CHECK")end
 end
 end
 end)
 
--- CRITICAL: Check if loadstring/load is hooked using debug.getinfo
+-- ADVANCED HOOK DETECTION
+-- 1. Check upvalues (hooked functions have closures with upvalues)
+pcall(function()
+if debug and debug.getupvalue then
 local _ls=loadstring or load
-pcall(function()
-if debug and debug.getinfo then
-local i=debug.getinfo(_ls)
-if i and i.what~="C"then _crash("Hooked loadstring detected","HOOK_DETECTED")end
-local i2=debug.getinfo(string.char)
-if i2 and i2.what~="C"then _crash("Hooked string.char detected","HOOK_DETECTED")end
-local i3=debug.getinfo(table.concat)
-if i3 and i3.what~="C"then _crash("Hooked table.concat detected","HOOK_DETECTED")end
+for i=1,10 do
+local n,v=debug.getupvalue(_ls,i)
+if n then _crash("loadstring has upvalue: "..tostring(n),"HOOK_DETECTED")break end
+end
 end
 end)
 
--- Behavioral check: string.char should return exactly what we expect
+-- 2. Check if functions were replaced by comparing behavior timing
 pcall(function()
-local test=string.char(87,73,83,80,69,82)
-if test~="WISPER"then _crash("string.char behavior modified","TAMPER_ATTEMPT")end
+local t1=os.clock()
+for i=1,1000 do local _=string.char(65)end
+local t2=os.clock()
+if(t2-t1)>0.1 then _crash("string.char timing anomaly","HOOK_DETECTED")end
 end)
 
--- Check for common dumper globals
-local signs={"scriptdump","dumpscript","scripthook","stealthhook","loadstringspy","DUMPER","captured","sendDump"}
-for _,s in pairs(signs)do
+-- 3. Check getfenv on loadstring (hooks change environment)
 pcall(function()
-if rawget(_G,s)then _crash("Dumper signature: "..s,"DUMP_ATTEMPT")end
-if getgenv and rawget(getgenv(),s)then _crash("Dumper signature: "..s,"DUMP_ATTEMPT")end
+local _ls=loadstring or load
+local env=getfenv and getfenv(_ls)
+if env and env~=_G and env~=getfenv(0)then _crash("loadstring env modified","HOOK_DETECTED")end
 end)
+
+-- 4. Scan ALL globals for dumper patterns
+pcall(function()
+local dominated={"captured","sendDump","WEBHOOK","DUMPER","hookfunc","dump_","stealth","executor_name"}
+local function scan(t,depth)
+if depth>2 or type(t)~="table"then return end
+for k,v in pairs(t)do
+local ks=tostring(k):lower()
+for _,p in pairs(dominated)do
+if ks:find(p:lower())then _crash("Dumper var: "..tostring(k),"DUMP_ATTEMPT")return end
 end
+end
+end
+scan(_G,0)
+if getgenv then scan(getgenv(),0)end
+if getrenv then scan(getrenv(),0)end
+end)
 
--- Check for hooked HttpGet
+-- 5. Check if hookfunction was used recently (check for hooked marker)
 pcall(function()
-if debug and debug.getinfo then
-local i=debug.getinfo(game.HttpGet)
-if i and i.what~="C"then _crash("Hooked HttpGet detected","HOOK_DETECTED")end
+if checkcaller and not checkcaller()then _crash("External caller detected","HOOK_DETECTED")end
+end)
+
+-- 6. Check connection count on certain events (dumpers often connect)
+pcall(function()
+local ls=loadstring or load
+if getconnections then
+local c=getconnections(game:GetService("ScriptContext").Error)
+if #c>5 then _crash("Too many error connections","DUMP_ATTEMPT")end
 end
 end)
 
--- Check for WEBHOOK in environment (dumper pattern)
-pcall(function()
-if _G.WEBHOOK or(getgenv and getgenv().WEBHOOK)then _crash("Webhook dumper detected","DUMP_ATTEMPT")end
-end)
-
-end
-_S()
 if not _SAFE then return end
-local _D=""for i=1,#_E do _D=_D..string.char(bit32 and bit32.bxor(_E[i],_K[(i-1)%#_K+1])or(function(a,b)local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r end)(_E[i],_K[(i-1)%#_K+1]))end
-(loadstring or load)(_D)()`;
+
+-- MULTI-STAGE DECRYPTION (harder to capture complete code)
+local _C={}
+local _X=function(a,b)
+if bit32 then return bit32.bxor(a,b)end
+local r=0 for j=0,7 do if a%2~=b%2 then r=r+2^j end a=math.floor(a/2)b=math.floor(b/2)end return r
+end
+for i=1,#_E do _C[i]=string.char(_X(_E[i],_K[(i-1)%#_K+1]))end
+
+-- Final check before execution
+if not _SAFE then return end
+
+-- Execute using table.concat (different from loadstring direct)
+local _F=table.concat(_C)
+local _R,_Er=(loadstring or load)(_F)
+if _R then _R()elseif _Er then warn("[Wisper] Load error")end`;
     
     // NOTE: Loader is NOT obfuscated to ensure reliability
     // Game scripts ARE obfuscated via scripts.js route
