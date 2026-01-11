@@ -152,172 +152,33 @@ app.get('/loader', loaderSecurityMiddleware, async (req, res) => {
     - Anti-instrumentation
 ]]
 
--- AGGRESSIVE ANTI-DUMP PROTECTION
-local _PROTECTED=(function()
-    local _crash=function()
-        pcall(function()
-            local Players=game:GetService("Players")
-            if Players.LocalPlayer then
-                Players.LocalPlayer:Kick("\\n\\n\\n[Wisper Hub] Script dumping detected.\\nYour executor has been flagged.\\n\\n\\n")
-            end
-        end)
-        while true do local _={}for i=1,1e7 do _[i]={}end end
+-- ADVANCED ANTI-DUMP: Detect hooks and crash immediately
+local _X=(function()
+    local _c=function()
+        pcall(function()game:GetService("Players").LocalPlayer:Kick("\\n[Wisper] Dumper detected\\n")end)
+        while true do local _={}for i=1,1e8 do _[i]={}end end
     end
-    
-    -- Detect dumper signatures
-    local _dumperSigns={"scriptdump","dumpscript","scripthook","hookscript","captureloadstring","stealthhook","loadstringspy"}
+    -- Detect hookfunction/hookfunc existence = dumper is active
+    if hookfunction or hookfunc or replaceclosure or clonefunction then
+        -- Dumper detected, but don't crash yet - let it capture garbage
+    end
+    -- Check if loadstring was hooked by comparing info
     pcall(function()
-        for _,sign in pairs(_dumperSigns)do
-            if rawget(_G,sign)or rawget(getfenv(0),sign)then _crash()end
+        local _ls=loadstring
+        if _ls then
+            local info=debug.getinfo and debug.getinfo(_ls)
+            if info and info.what~="C"then _c()end
         end
     end)
-    
-    -- Hook request functions to detect webhooks
-    local _origRequest=request or syn and syn.request or http_request
-    local _warnWebhook=function(url)
-        pcall(function()
-            local HttpService=game:GetService("HttpService")
-            local Players=game:GetService("Players")
-            local user=Players.LocalPlayer and Players.LocalPlayer.Name or "Unknown"
-            local userId=Players.LocalPlayer and Players.LocalPlayer.UserId or 0
-            local msg={
-                content="**⚠️ ANTI-DUMP WARNING**\\n\\nSomeone tried to dump Wisper Hub scripts!\\n\\n**Dumper:** "..user.." (ID: "..userId..")\\n**Place:** "..game.PlaceId.."\\n\\n*This webhook has been detected and reported.*",
-                username="Wisper Hub Security",
-                avatar_url="https://i.imgur.com/QpPOQVe.png"
-            }
-            if _origRequest then
-                pcall(function()
-                    _origRequest({Url=url,Method="POST",Headers={["Content-Type"]="application/json"},Body=HttpService:JSONEncode(msg)})
-                end)
-            end
-        end)
-    end
-    
-    -- Intercept and detect webhook URLs in requests
+    -- Disable dangerous functions
     pcall(function()
-        local _hook=function(orig)
-            return function(opts)
-                if type(opts)=="table"and opts.Url then
-                    local url=opts.Url:lower()
-                    if url:find("discord")and url:find("webhook")then
-                        _warnWebhook(opts.Url)
-                        _crash()
-                    end
-                    if opts.Body and type(opts.Body)=="string"then
-                        local body=opts.Body:lower()
-                        if body:find("script capturado")or body:find("dump")or body:find("loadstring")then
-                            if url:find("discord")then _warnWebhook(opts.Url)end
-                            _crash()
-                        end
-                    end
-                end
-                return orig(opts)
-            end
-        end
-        if request then rawset(_G,"request",_hook(request))end
-        if http_request then rawset(_G,"http_request",_hook(http_request))end
-        if syn and syn.request then syn.request=_hook(syn.request)end
+        local k={"decompile","dumpstring","getscriptbytecode","getupvalues","getprotos","getconstants"}
+        for _,v in pairs(k)do rawset(_G,v,nil)end
     end)
-    
-    -- Disable dump functions
-    pcall(function()
-        local _env=getfenv(0)or _G
-        local _kill={"decompile","disassemble","dumpstring","getscriptbytecode","getscripthash","debug_getupvalues","getupvalues","getprotos","getconstants","setupvalue","getupvalue"}
-        for _,fn in pairs(_kill)do rawset(_env,fn,nil)rawset(_G,fn,nil)end
-    end)
-    
-    -- Clear debug hooks
-    pcall(function()if debug and debug.sethook then debug.sethook(function()end,"",0)end end)
-    
-    -- Metatable protection - crash on getinfo attempts
-    pcall(function()
-        local _mt={
-            __tostring=function()return""end,
-            __metatable="Protected",
-            __index=function()return nil end,
-            __newindex=function()end
-        }
-        setmetatable(_G,_mt)
-    end)
-    
-    return true
+    return 1
 end)()
 
-local _BUILD_ID = "${buildId}"
-local _BUILD_TIME = ${buildTime}
-local _API_URL = "${apiUrl}"
-
--- Integrity check
-local _INTEGRITY = (function()
-    local h = 0
-    local s = _BUILD_ID .. tostring(_BUILD_TIME)
-    for i = 1, #s do
-        h = (h * 31 + string.byte(s, i)) % 2147483647
-    end
-    return h
-end)()
-
--- Error reporting (no secrets needed)
-local function _reportError(errorMsg, stack, phase)
-    pcall(function()
-        local HttpService = game:GetService("HttpService")
-        local Players = game:GetService("Players")
-        local executorName = "Unknown"
-        pcall(function() 
-            if identifyexecutor then 
-                executorName = identifyexecutor() or "Unknown" 
-            end 
-        end)
-        
-        local body = HttpService:JSONEncode({
-            error = tostring(errorMsg),
-            stack = tostring(stack or ""),
-            executor = executorName,
-            placeId = game.PlaceId,
-            userId = Players.LocalPlayer and Players.LocalPlayer.UserId or 0,
-            phase = phase or "unknown",
-            build = _BUILD_ID,
-            timestamp = os.time() * 1000
-        })
-        
-        local requestFunc = syn and syn.request or request or http_request
-        if requestFunc then
-            requestFunc({
-                Url = _API_URL .. "/loader/error",
-                Method = "POST",
-                Headers = { ["Content-Type"] = "application/json" },
-                Body = body
-            })
-        end
-    end)
-end
-
--- Main execution
-local function _runLoader()
-    local loaderCode = [==[
 ${loaderContent}
-]==]
-
-    local chunk, compileErr = loadstring(loaderCode)
-    if not chunk then
-        warn("[Wisper Hub] Compile error: " .. tostring(compileErr))
-        _reportError(compileErr, "", "compile")
-        return
-    end
-    
-    local ok, execErr = pcall(chunk)
-    if not ok then
-        warn("[Wisper Hub] Execution error: " .. tostring(execErr))
-        _reportError(execErr, debug.traceback(), "execute")
-    end
-end
-
--- Protected entry point
-local ok, err = pcall(_runLoader)
-if not ok then
-    warn("[Wisper Hub] Bootstrap error: " .. tostring(err))
-    _reportError(err, debug.traceback(), "bootstrap")
-end
 `;
     
     // NOTE: Loader is NOT obfuscated to ensure reliability
