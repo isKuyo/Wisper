@@ -564,7 +564,7 @@ router.get('/scripts/:id/preview', async (req, res, next) => {
     }
 
     // Import obfuscator
-    const { obfuscate } = require('../utils/Obfuscator');
+    const { obfuscate } = require('../utils/obfuscator');
 
     // Generate unique session ID for each preview (ensures different obfuscation each time)
     const uniqueSessionId = crypto.randomBytes(32).toString('hex');
