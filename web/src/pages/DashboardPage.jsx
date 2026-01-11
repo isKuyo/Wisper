@@ -15,8 +15,8 @@ import {
   Plus
 } from 'lucide-react'
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
-const LOADER_URL = API_URL.includes('api.wisper.lol') ? 'https://api.wisper.lol/loader' : API_URL.replace('/api', '/loader')
+const API_URL = import.meta.env.VITE_API_URL || 'https://wisper.lol/api'
+const LOADER_URL = API_URL.includes('wisper.lol') ? 'https://wisper.lol/loader' : API_URL.replace('/api', '/loader')
 
 export default function DashboardPage() {
   const { user, refreshUser } = useAuth()
